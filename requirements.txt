@@ -3,3 +3,4 @@ ipykernel
 openpyxl
 matplotlib
 jinja2
+scikit-learn
