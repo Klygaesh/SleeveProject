@@ -1,0 +1,5 @@
+pandas
+ipykernel
+openpyxl
+matplotlib
+jinja2
