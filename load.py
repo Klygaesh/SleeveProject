@@ -18,3 +18,4 @@ def load_data_from_excel(name:str='database.xlsx'):
 
 if __name__ == "__main__":
     print(load_data_from_excel())
+    print("hello")
