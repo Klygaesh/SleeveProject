@@ -16,5 +16,4 @@ Windows:
 
 3. Install requirements
 ```bash
-pip install -r requirements.txt
-```
+pip install -r requirements.txt'''
