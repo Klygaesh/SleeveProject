@@ -1,7 +1,8 @@
+from matplotlib.markers import MarkerStyle
 import numpy as np
 import pandas as pd
 import sklearn as sl
-from sklearn import discriminant_analysis
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -11,7 +12,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 
 ##########
-def process_da(data, lin:bool=True, forest:bool=True):
+def process_da(data, lin:bool=True, plot:bool=False, forest:bool=False):
     print(data.shape)
     print(1, ": ")
     X, y = separate_discriminant(data)
@@ -26,6 +27,10 @@ def process_da(data, lin:bool=True, forest:bool=True):
     
     if lin:
         analyser = linear_discriminant_analyser(X_train, y_train)
+        trans = dimensionality_reduction(analyser, X)
+        print(trans.shape)
+        if plot:
+            plot_reduction(trans, y)
     else:
         analyser = quadratic_discriminant_analyser(X_train, y_train)
     y_pred = analyser.predict(X_test)
@@ -37,24 +42,18 @@ def process_da(data, lin:bool=True, forest:bool=True):
     
     acc = evaluate_confusion_matrix(y_test, y_pred)
     print_shapes(6, X_train, X_test, y_train, y_test)
-    return()
+    return(acc)
 
 def print_shapes(k, X_train, X_test, y_train, y_test):
+    print()
     print(k, ": ")
     print('x_train:', X_train.shape, 'y_train:', y_train.shape)
     print('x_test:', X_test.shape, 'y_test:', y_test.shape)
-    print()
     return()
 
 ##########
-# def separate_discriminant(db):
-#     jNash = db.columns.get_loc('Présence NASH')
-#     y = db.iloc[:,jNash].values
-#     X = db.drop(db.columns[jNash], axis=1).values
-#     return(X, y)
-
 def separate_discriminant(data):
-    lMax, cMax = data.shape
+    cMax = data.shape[1]
     X = data[:, 0:cMax-1]
     y = data[:, cMax-1]
     return(X, y)
@@ -69,22 +68,49 @@ def standard_scaling(X_train, X_test):
     X_test = sc.transform(X_test)
     return(X_train, X_test)
 
+###
 def linear_discriminant_analyser(X_train, y_train):
-    lda = LDA(n_components=1)
+    lda = LDA(n_components=None, store_covariance=True)
     lda.fit(X_train, y_train)
+    print(lda.covariance_.shape)
+    print(lda.coef_.shape)
     return(lda)
 
-def dimensionality_reduction(lda, data):
-    trans = lda.transform(data)
-    # X_train = lda.transform(X_train)
-    # X_test = lda.transform(X_test)
+def dimensionality_reduction(lda, X):
+    lda_var_ratios = lda.explained_variance_ratio_
+    trans = lda.transform(X)
     return(trans)
 
+def plot_reduction(trans, y):
+    grave = y == 1
+    lMax = trans.shape[0]
+    N = np.count_nonzero(grave)
+    print(trans[grave].shape)
+    print(trans[~grave].shape)
+    plt.close('all')
+    plt.scatter(trans[grave], np.zeros(N), marker='+', color='r', label='forme grave')
+    plt.scatter(trans[~grave], np.zeros(lMax-N), marker='+', color='b', label='forme légère')
+    plt.legend()
+    plt.show()
+    return()
+
+def select_n_components(var_ratio, goal_var: float) -> int:
+    total_variance = 0.0
+    n_components = 0
+    for explained_variance in var_ratio:
+        total_variance += explained_variance
+        n_components += 1
+        if total_variance >= goal_var:
+            break
+    return n_components
+
+###
 def quadratic_discriminant_analyser(X_train, y_train):
     qda = QDA()
     qda.fit(X_train, y_train)
     return(qda)
 
+###
 def evaluate_forest_classifier(X_train, X_test, y_train):
     classifier = RandomForestClassifier(max_depth=2, random_state=0)
     classifier.fit(X_train, y_train)
