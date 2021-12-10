@@ -1,0 +1,64 @@
+import numpy as np
+import pandas as pd
+import sklearn as sl
+from sklearn import discriminant_analysis
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+
+
+def separate_discriminant(db):
+    jNash = db.columns.get_loc('Présence NASH')
+    y = db.iloc[:,jNash].values
+    X = db.drop(db.columns[jNash], axis=1).values
+    return(X, y)
+
+def separate_train_test(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    return(X_train, X_test, y_train, y_test)
+
+def standard_scaling(X_train, X_test):
+    sc = StandardScaler()
+    X_train = sc.fit_transform(X_train)
+    X_test = sc.transform(X_test)
+    return(X_train, X_test)
+
+def linear_discriminant_analysis(X_train, X_test, y_train):
+    lda = LDA(n_components=1)
+    X_train = lda.fit_transform(X_train, y_train)
+    X_test = lda.transform(X_test)
+    return(X_train, X_test)
+
+def evaluate_forest_classifier(X_train, X_test, y_train):
+    classifier = RandomForestClassifier(max_depth=2, random_state=0)
+    classifier.fit(X_train, y_train)
+    y_pred = classifier.predict(X_test)
+    return(y_pred)
+
+def evaluate_confusion_matrix(y_test, y_pred):
+    cm = confusion_matrix(y_test, y_pred)
+    acc = accuracy_score(y_test, y_pred)
+    print(cm)
+    print('Accuracy' + str(acc))
+    return(acc)
+
+def process_lda(dbPreop):
+    X, y = separate_discriminant(dbPreop)
+    X_train, X_test, y_train, y_test = separate_train_test(X, y)
+    X_train, X_test = standard_scaling(X_train, X_test)
+    X_train, X_test = linear_discriminant_analysis(X_train, X_test, y_train)
+    y_pred = evaluate_forest_classifier(X_train, X_test, y_train)
+    acc = evaluate_confusion_matrix(y_test, y_pred)
+    return(acc)
+
+
+if __name__ == "__main__":
+    from load_data import database_preop
+    database = database_preop()
+    X,y = separate_discriminant(database)
+    print(X)
+    print(y)
