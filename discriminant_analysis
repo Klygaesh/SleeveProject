@@ -1,9 +1,11 @@
+from typing import Type
 from matplotlib.markers import MarkerStyle
 import numpy as np
 import pandas as pd
 import sklearn as sl
 import matplotlib.pyplot as plt
 
+from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA, QuadraticDiscriminantAnalysis as QDA
@@ -12,44 +14,42 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 
 ##########
-def process_da(data, lin:bool=True, plot:bool=False, forest:bool=False):
+def process_analysis(data, method:str='l', shuff:bool=False, plot:bool=False):
     print(data.shape)
     print(1, ": ")
     X, y = separate_discriminant(data)
     print(X.shape, y.shape)
     print()
 
-    X_train, X_test, y_train, y_test = separate_train_test(X, y)
+    X_train, X_test, y_train, y_test = separate_train_test(X, y, shuff)
     print_shapes(2, X_train, X_test, y_train, y_test)
 
     X_train, X_test = standard_scaling(X_train, X_test)
     print_shapes(3, X_train, X_test, y_train, y_test)
     
-    if lin:
+    if method=='l':
         analyser = linear_discriminant_analyser(X_train, y_train)
         trans = dimensionality_reduction(analyser, X)
         print(trans.shape)
         if plot:
             plot_reduction(trans, y)
-    else:
+    elif method=='q':
         analyser = quadratic_discriminant_analyser(X_train, y_train)
+    elif method=='f':
+        analyser = forest_classifier(X_train, y_train)
     y_pred = analyser.predict(X_test)
     print_shapes(4, X_train, X_test, y_train, y_test)
     
-    if forest:
-        y_pred = evaluate_forest_classifier(X_train, X_test, y_train)
-        print_shapes(5, X_train, X_test, y_train, y_test)
-    
     acc = evaluate_confusion_matrix(y_test, y_pred)
-    print_shapes(6, X_train, X_test, y_train, y_test)
-    return(acc)
+    print_shapes(5, X_train, X_test, y_train, y_test)
+    return acc
 
 def print_shapes(k, X_train, X_test, y_train, y_test):
     print()
     print(k, ": ")
     print('x_train:', X_train.shape, 'y_train:', y_train.shape)
     print('x_test:', X_test.shape, 'y_test:', y_test.shape)
-    return()
+    return
 
 ##########
 def separate_discriminant(data):
@@ -58,8 +58,8 @@ def separate_discriminant(data):
     y = data[:, cMax-1]
     return(X, y)
 
-def separate_train_test(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+def separate_train_test(X, y, shuff):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=shuff)
     return(X_train, X_test, y_train, y_test)
 
 def standard_scaling(X_train, X_test):
@@ -69,18 +69,30 @@ def standard_scaling(X_train, X_test):
     return(X_train, X_test)
 
 ###
+def quadratic_discriminant_analyser(X_train, y_train):
+    qda = QDA()
+    qda.fit(X_train, y_train)
+    return qda
+
+def forest_classifier(X_train, y_train):
+    classifier = RandomForestClassifier(max_depth=2, random_state=0)
+    classifier.fit(X_train, y_train)
+    return classifier
+
+###
 def linear_discriminant_analyser(X_train, y_train):
     lda = LDA(n_components=None, store_covariance=True)
     lda.fit(X_train, y_train)
     print(lda.covariance_.shape)
     print(lda.coef_.shape)
-    return(lda)
+    return lda
 
-def dimensionality_reduction(lda, X):
-    lda_var_ratios = lda.explained_variance_ratio_
-    trans = lda.transform(X)
-    return(trans)
+def dimensionality_reduction(analyser, X):
+    var_ratios = analyser.explained_variance_ratio_
+    trans = analyser.transform(X)
+    return trans
 
+###
 def plot_reduction(trans, y):
     grave = y == 1
     lMax = trans.shape[0]
@@ -92,7 +104,7 @@ def plot_reduction(trans, y):
     plt.scatter(trans[~grave], np.zeros(lMax-N), marker='+', color='b', label='forme légère')
     plt.legend()
     plt.show()
-    return()
+    return
 
 def select_n_components(var_ratio, goal_var: float) -> int:
     total_variance = 0.0
@@ -105,27 +117,21 @@ def select_n_components(var_ratio, goal_var: float) -> int:
     return n_components
 
 ###
-def quadratic_discriminant_analyser(X_train, y_train):
-    qda = QDA()
-    qda.fit(X_train, y_train)
-    return(qda)
-
-###
-def evaluate_forest_classifier(X_train, X_test, y_train):
-    classifier = RandomForestClassifier(max_depth=2, random_state=0)
-    classifier.fit(X_train, y_train)
-    y_pred = classifier.predict(X_test)
-    return(y_pred)
-
 def evaluate_confusion_matrix(y_test, y_pred):
     cm = confusion_matrix(y_test, y_pred)
     acc = accuracy_score(y_test, y_pred)
     print(cm)
     print('Accuracy: ' + str(acc))
-    return(acc)
+    return acc
 
 ##########
 if __name__ == "__main__":
     from load_data import database_preop
     data = database_preop().values
-    print(process_da(data))
+    l = []
+    for k in range(100):
+        acc = process_analysis(data, method='l', shuff=True)
+        l.append(acc)
+    l = np.array(l)
+    print()
+    print("mean: ", l.mean(0))
