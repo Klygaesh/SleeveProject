@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from sklearn.impute import SimpleImputer
 
 def load_data_from_excel(name:str='database.xlsx'):
     db = pd.read_excel(os.path.join('data', name))
@@ -25,10 +26,13 @@ def database_preop(db:pd.DataFrame=load_data_from_excel()):
             ],
             inplace = True)
     dbPreop['Présence NASH'] = dbPreop.pop('Présence NASH')
-    return dbPreop
+    return fill_nan(dbPreop)
 
-def normalise(db):
-    return()
+def fill_nan(db):
+    imputer = SimpleImputer(missing_values=-1, strategy='median')
+    result_imputer = imputer.fit_transform(db)
+    print(db)
+    return pd.DataFrame(result_imputer, columns=db.columns)
 
 
 if __name__ == "__main__":
