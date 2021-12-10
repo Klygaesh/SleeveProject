@@ -1,0 +1,105 @@
+import numpy as np
+import pandas as pd
+import sklearn as sl
+from sklearn import discriminant_analysis
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA, QuadraticDiscriminantAnalysis as QDA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+
+##########
+def process_da(data, lin:bool=True, forest:bool=True):
+    print(data.shape)
+    print(1, ": ")
+    X, y = separate_discriminant(data)
+    print(X.shape, y.shape)
+    print()
+
+    X_train, X_test, y_train, y_test = separate_train_test(X, y)
+    print_shapes(2, X_train, X_test, y_train, y_test)
+
+    X_train, X_test = standard_scaling(X_train, X_test)
+    print_shapes(3, X_train, X_test, y_train, y_test)
+    
+    if lin:
+        analyser = linear_discriminant_analyser(X_train, y_train)
+    else:
+        analyser = quadratic_discriminant_analyser(X_train, y_train)
+    y_pred = analyser.predict(X_test)
+    print_shapes(4, X_train, X_test, y_train, y_test)
+    
+    if forest:
+        y_pred = evaluate_forest_classifier(X_train, X_test, y_train)
+        print_shapes(5, X_train, X_test, y_train, y_test)
+    
+    acc = evaluate_confusion_matrix(y_test, y_pred)
+    print_shapes(6, X_train, X_test, y_train, y_test)
+    return()
+
+def print_shapes(k, X_train, X_test, y_train, y_test):
+    print(k, ": ")
+    print('x_train:', X_train.shape, 'y_train:', y_train.shape)
+    print('x_test:', X_test.shape, 'y_test:', y_test.shape)
+    print()
+    return()
+
+##########
+# def separate_discriminant(db):
+#     jNash = db.columns.get_loc('Présence NASH')
+#     y = db.iloc[:,jNash].values
+#     X = db.drop(db.columns[jNash], axis=1).values
+#     return(X, y)
+
+def separate_discriminant(data):
+    lMax, cMax = data.shape
+    X = data[:, 0:cMax-1]
+    y = data[:, cMax-1]
+    return(X, y)
+
+def separate_train_test(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    return(X_train, X_test, y_train, y_test)
+
+def standard_scaling(X_train, X_test):
+    sc = StandardScaler()
+    X_train = sc.fit_transform(X_train)
+    X_test = sc.transform(X_test)
+    return(X_train, X_test)
+
+def linear_discriminant_analyser(X_train, y_train):
+    lda = LDA(n_components=1)
+    lda.fit(X_train, y_train)
+    return(lda)
+
+def dimensionality_reduction(lda, data):
+    trans = lda.transform(data)
+    # X_train = lda.transform(X_train)
+    # X_test = lda.transform(X_test)
+    return(trans)
+
+def quadratic_discriminant_analyser(X_train, y_train):
+    qda = QDA()
+    qda.fit(X_train, y_train)
+    return(qda)
+
+def evaluate_forest_classifier(X_train, X_test, y_train):
+    classifier = RandomForestClassifier(max_depth=2, random_state=0)
+    classifier.fit(X_train, y_train)
+    y_pred = classifier.predict(X_test)
+    return(y_pred)
+
+def evaluate_confusion_matrix(y_test, y_pred):
+    cm = confusion_matrix(y_test, y_pred)
+    acc = accuracy_score(y_test, y_pred)
+    print(cm)
+    print('Accuracy: ' + str(acc))
+    return(acc)
+
+##########
+if __name__ == "__main__":
+    from load_data import database_preop
+    data = database_preop().values
+    print(process_da(data))
