@@ -1,5 +1,4 @@
-
-from load import load_data_from_excel
+from load_data import *
 
 if __name__ == "__main__":
     pass
