@@ -8,9 +8,9 @@ def load_data_from_excel(name:str='database.xlsx'):
     db.reset_index(drop = True, inplace = True)
     return db
 
-def database_preop(database:pd.DataFrame=load_data_from_excel()):
-    jMax = database.columns.get_loc('CAP')
-    dbPreop = database.iloc[:,0:jMax+1]
+def database_preop(db:pd.DataFrame=load_data_from_excel()):
+    cMax = db.columns.get_loc('CAP')
+    dbPreop = db.iloc[:,0:cMax+1]
     dbPreop.drop(
         columns = [
             'Date naissance',
@@ -24,6 +24,7 @@ def database_preop(database:pd.DataFrame=load_data_from_excel()):
             'Fibrose Kleiner'
             ],
             inplace = True)
+    dbPreop['Présence NASH'] = dbPreop.pop('Présence NASH')
     return dbPreop
 
 def normalise(db):
