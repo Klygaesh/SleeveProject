@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import sklearn as sl
 import matplotlib.pyplot as plt
+import xlsxwriter as xlsxw
 
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
@@ -84,7 +85,23 @@ def linear_discriminant_analyser(X_train, y_train):
     lda.fit(X_train, y_train)
     print(lda.covariance_.shape)
     print(lda.coef_.shape)
+    coef_to_excel(lda.covariance_)
     return lda
+
+def coef_to_excel(tab): 
+    # workbook = xlsxw.Workbook('coefs.xlsx') 
+    # worksheet = workbook.add_worksheet("My sheet") 
+    # row0, col0 = 1, 1
+    # i_max, j_max = tab.shape
+    # for i in range(i_max):
+    #     for j in range(j_max):
+    #         worksheet.write(row0 + i, col0 + j, tab[i, j])
+    # workbook.close()
+
+    df = pd.DataFrame(tab, index = col_names, columns = col_names)
+    df.to_excel (r'D:\-CHARLES-\VSCodeProjects\SleeveProject\data\coefs.xlsx', index = False, header=True)
+    df.style.background_gradient(cmap='coolwarm').set_precision(2)
+    return
 
 def dimensionality_reduction(analyser, X):
     var_ratios = analyser.explained_variance_ratio_
@@ -128,6 +145,7 @@ def evaluate_confusion_matrix(y_test, y_pred):
 if __name__ == "__main__":
     from load_data import database_preop
     data = database_preop().values
+    col_names = database_preop().columns.values.tolist()
     acc = process_analysis(data, method='l', shuff=True, plot=False)
     print(acc)
 
