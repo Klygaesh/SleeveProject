@@ -12,6 +12,7 @@ def separate_data(data, shuff:bool=False):
     new_data = (X_train, X_test, y_train, y_test)
     return new_data
 
+
 ###
 def separate_discriminant(data):
     cMax = data.shape[1]
