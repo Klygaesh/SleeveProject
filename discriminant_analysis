@@ -142,8 +142,9 @@ def evaluate_confusion_matrix(y_test, y_pred):
 
 ##########
 if __name__ == "__main__":
-    from separate_data import load_data
+    from separate_data import load_data, get_col_names
     new_data = load_data()
+    col_names = get_col_names
     eval = process_analysis(new_data, method='l', plot=True)
     print()
     print(eval)
@@ -153,7 +154,7 @@ if __name__ == "__main__":
 def eval_mean_n(N):
     evals = []
     for k in range(N):
-        eval = process_analysis(data, method='l', shuff=True)
+        eval = process_analysis(new_data, method='l', shuff=True)
         evals.append(eval)
     eval_mean = np.array(evals).sum(axis=0)
     print()

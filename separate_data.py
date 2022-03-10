@@ -41,13 +41,17 @@ def load_data():
         d = pickle.load(f1)
     return d
 
+def get_col_names():
+    from load_data import database_preop
+    col_names = database_preop().columns.values.tolist()
+    return(col_names)
 
 ##########
 if __name__ == "__main__":
     from load_data import database_preop
     data = database_preop().values
-    col_names = database_preop().columns.values.tolist()
+    col_names = get_col_names()
     new_data = separate_data(data, shuff=True)
     save_data(new_data)
     X_train, X_test, y_train, y_test = load_data()
-    print("separated data successfully saved")
+    print("Separated datas successfully saved")
