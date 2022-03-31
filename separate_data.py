@@ -32,13 +32,13 @@ def standard_scaling(X_train, X_test):
 
 ###
 def save_data(d):
-    with open('mypicklefile', 'wb') as f1:
-        pickle.dump(d, f1)
+    with open('mypicklefile', 'wb') as pfile:
+        pickle.dump(d, pfile)
     return
 
 def load_data():
-    with open('mypicklefile', 'rb') as f1:
-        d = pickle.load(f1)
+    with open('mypicklefile', 'rb') as pfile:
+        d = pickle.load(pfile)
     return d
 
 def get_col_names():

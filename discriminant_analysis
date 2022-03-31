@@ -1,37 +1,42 @@
-import pickle
 import numpy as np
 import pandas as pd
 import sklearn as sl
 import matplotlib.pyplot as plt
 import xlsxwriter as xlsxw
 
+from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA, QuadraticDiscriminantAnalysis as QDA
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_curve, roc_auc_score
+from sklearn.linear_model import ElasticNet, LogisticRegression
+from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_curve, roc_auc_score, classification_report
 
 
 ##########
-def process_analysis(new_data, method:str='l', plot:bool=False):
+def process_analysis(new_data, method:str='lda', plot:bool=False):
     X_train, X_test, y_train, y_test = new_data
     X = np.concatenate((X_train, X_test), axis=0)
     y = np.concatenate((y_train, y_test), axis=0)
     
-    if method=='l':
+    if method=='lda':
         analyser = linear_discriminant_analyser(X_train, y_train)
-        trans = dimensionality_reduction(analyser, X)
-        print(trans.shape)
-        if plot:
-            plot_reduction(trans, y)
-    elif method=='q':
+        # trans = dimensionality_reduction(analyser, X)
+        # print(trans.shape)
+        # if plot:
+            # plot_reduction(trans, y)
+    elif method=='qda':
         analyser = quadratic_discriminant_analyser(X_train, y_train)
-    elif method=='f':
+    elif method=='rf':
         analyser = forest_classifier(X_train, y_train)
-    elif method=='r':
-        analyser = LogisticRegression()
-        analyser.fit(X_train, y_train)
+    elif method=='lr':
+        analyser = logistic_regression_analyser(X_train, y_train)
     y_pred = analyser.predict(X_test)
+
+    k_fold_acc = cross_val_score(analyser, X_train, y_train, cv=5)
+    k_fold_mean = k_fold_acc.mean()
+    print('\n', 'k_fold_acc:', k_fold_acc)
+    print('k_fold_mean:', k_fold_mean)
+    coef_to_excel(analyser.coef_)
 
     if plot:
         probs = analyser.predict_proba(X_test)
@@ -39,24 +44,29 @@ def process_analysis(new_data, method:str='l', plot:bool=False):
         fper, tper, thresholds = roc_curve(y_test, probs) 
         # print('fper:', fper<=0.1)
         # print('tper:', tper>=0.9)
-        print('thresholds:', np.min(thresholds[fper<=0.1]))
-        print('thresholds:', np.max(thresholds[tper>=0.9]))
+        th_max = np.min(thresholds[fper<=0.1])
+        th_min = np.max(thresholds[tper>=0.9])
+        print('\n', 'threshold:', th_min)
+        print('threshold:', th_max)
+        plot_probs(y_test, probs, [th_min, th_max])
         plot_roc_curve(fper, tper)
     
     eval = evaluate_confusion_matrix(y_train, analyser.predict(X_train))
     eval = evaluate_confusion_matrix(y_test, y_pred)
     return eval
 
+def model_selection(analyser, X_train, y_train):
+    k_fold_acc = cross_val_score(analyser, X_train, y_train, cv=5)
+    k_fold_mean = k_fold_acc.mean()
+    print('\n', 'k_fold_acc:', k_fold_acc)
+    print('k_fold_mean:', k_fold_mean)
+
+    analyser = LogisticRegression(penalty=ElasticNet)
+    return
 
 ###
-def load_data():
-    with open('mypicklefile', 'rb') as f1:
-        d = pickle.load(f1)
-    return d
-
 def print_shapes(k, X_train, X_test, y_train, y_test):
-    print()
-    print(k, ": ")
+    print('\n', k, ": ")
     print('x_train:', X_train.shape, 'y_train:', y_train.shape)
     print('x_test:', X_test.shape, 'y_test:', y_test.shape)
     return
@@ -69,33 +79,32 @@ def quadratic_discriminant_analyser(X_train, y_train):
     return qda
 
 def forest_classifier(X_train, y_train):
-    classifier = RandomForestClassifier(max_depth=2, random_state=0)
-    classifier.fit(X_train, y_train)
-    return classifier
+    rf = RandomForestClassifier(max_depth=2, random_state=0)
+    rf.fit(X_train, y_train)
+    return rf
 
 def linear_discriminant_analyser(X_train, y_train):
     lda = LDA(n_components=None, store_covariance=True)
     lda.fit(X_train, y_train)
-    print(lda.covariance_.shape)
-    print(lda.coef_.shape)
-    # coef_to_excel(lda.covariance_)
     return lda
 
-def dimensionality_reduction(analyser, X):
-    var_ratios = analyser.explained_variance_ratio_
-    trans = analyser.transform(X)
-    return trans
+def logistic_regression_analyser(X_train, y_train):
+    lr = LogisticRegression()
+    lr.fit(X_train, y_train)
+    return lr
 
 ###
-def plot_reduction(trans, y):
-    grave = y == 1
-    lMax = trans.shape[0]
+def plot_probs(y_test, probs, xcoords):
+    grave = y_test == 1
+    lMax = probs.shape[0]
     N = np.count_nonzero(grave)
-    print(trans[grave].shape)
-    print(trans[~grave].shape)
+    # print(probs[grave].shape)
+    # print(probs[~grave].shape)
     plt.close('all')
-    plt.scatter(trans[grave], np.zeros(N), marker='+', color='r', label='forme grave')
-    plt.scatter(trans[~grave], np.zeros(lMax-N), marker='+', color='b', label='forme légère')
+    for xc in xcoords:
+        plt.axvline(x=xc, color='c', linestyle='--')
+    plt.scatter(probs[grave], np.zeros(N), marker='+', color='r', label='forme grave')
+    plt.scatter(probs[~grave], np.zeros(lMax-N), marker='+', color='b', label='forme légère')
     plt.legend()
     plt.show()
     return
@@ -123,45 +132,34 @@ def plot_roc_curve(fper, tper):
 def evaluate_confusion_matrix(y_test, y_pred):
     cm = confusion_matrix(y_test, y_pred)
     acc = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
     tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
-    print(tn, fp, fn, tp)
     se = tp / (tp+fn)
     sp = tn / (tn+fp)
+    f1 = 2* (acc*se) / (acc+se)
+    # f1 = f1_score(y_test, y_pred)
     auc = roc_auc_score(y_test, y_pred)
 
-    print()
-    print(cm)
-    print('Accuracy: %.4f %%' % (acc*100))
-    print('F1 Score: %.4f %%' % (f1*100))
-    print('Sensitivity: %.4f %%' % (se*100))
-    print('Specificity: %.4f %%' % (sp*100))
-    print('Area Under Curve: %.4f %%' % (auc*100))
+    print('\n', cm)
+    print('Accuracy: %.2f %%' % (acc*100))
+    print('Sensitivity: %.2f %%' % (se*100))
+    print('Specificity: %.2f %%' % (sp*100))
+    print('F1 Score: %.2f %%' % (f1*100))
+    print('Area Under Curve: %.2f %%' % (auc*100))
+    # print('\n', classification_report(y_test, y_pred))
     return ([acc, f1, se, sp, auc])
-
-
-##########
-if __name__ == "__main__":
-    from separate_data import load_data, get_col_names
-    new_data = load_data()
-    col_names = get_col_names
-    eval = process_analysis(new_data, method='l', plot=True)
-    print()
-    print(eval)
-
 
 ###
 def eval_mean_n(N):
     evals = []
     for k in range(N):
-        eval = process_analysis(new_data, method='l', shuff=True)
+        eval = process_analysis(new_data, method='rf', shuff=True)
         evals.append(eval)
     eval_mean = np.array(evals).sum(axis=0)
-    print()
-    print("mean: ", eval_mean)
+    print('\n', "mean: ", eval_mean)
     return eval_mean
 
-def coef_to_excel(tab): 
+def coef_to_excel(tab):
+    from separate_data import get_col_names
     # workbook = xlsxw.Workbook('coefs.xlsx') 
     # worksheet = workbook.add_worksheet("My sheet") 
     # row0, col0 = 1, 1
@@ -170,8 +168,17 @@ def coef_to_excel(tab):
     #     for j in range(j_max):
     #         worksheet.write(row0 + i, col0 + j, tab[i, j])
     # workbook.close()
-
-    df = pd.DataFrame(tab, index = col_names, columns = col_names)
-    df.to_excel (r'D:\-CHARLES-\VSCodeProjects\SleeveProject\data\coefs.xlsx', index = False, header=True)
+    col_names = get_col_names()[:-1]
+    print('\n', tab)
+    print(col_names)
+    df = pd.DataFrame(tab, columns = col_names)
     df.style.background_gradient(cmap='coolwarm').set_precision(2)
+    df.to_excel(r'D:\-CHARLES-\VSCodeProjects\SleeveProject\data\coefs.xlsx', index = False, header=True)
     return
+
+
+##########
+if __name__ == "__main__":
+    from separate_data import load_data, get_col_names
+    new_data = load_data()
+    eval = process_analysis(new_data, method='lr', plot=True)
