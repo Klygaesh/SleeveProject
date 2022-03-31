@@ -6,37 +6,39 @@ import xlsxwriter as xlsxw
 
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA, QuadraticDiscriminantAnalysis as QDA
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import ElasticNet, LogisticRegression
 from sklearn.metrics import confusion_matrix, accuracy_score, f1_score, roc_curve, roc_auc_score, classification_report
 
 
 ##########
-def process_analysis(new_data, method:str='lda', plot:bool=False):
+def process_analysis(new_data, method:str='lda', plot:bool=False, grid:bool=False):
     X_train, X_test, y_train, y_test = new_data
     X = np.concatenate((X_train, X_test), axis=0)
     y = np.concatenate((y_train, y_test), axis=0)
-    
+
     if method=='lda':
         analyser = linear_discriminant_analyser(X_train, y_train)
-        # trans = dimensionality_reduction(analyser, X)
-        # print(trans.shape)
-        # if plot:
-            # plot_reduction(trans, y)
     elif method=='qda':
         analyser = quadratic_discriminant_analyser(X_train, y_train)
     elif method=='rf':
         analyser = forest_classifier(X_train, y_train)
     elif method=='lr':
         analyser = logistic_regression_analyser(X_train, y_train)
+    elif method=='gb':
+        analyser = gradient_boosting_classifier(X_train, y_train, X_test, y_test)
     y_pred = analyser.predict(X_test)
+    # coefs_to_excel(analyser.coef_)
 
-    k_fold_acc = cross_val_score(analyser, X_train, y_train, cv=5)
-    k_fold_mean = k_fold_acc.mean()
-    print('\n', 'k_fold_acc:', k_fold_acc)
-    print('k_fold_mean:', k_fold_mean)
-    coef_to_excel(analyser.coef_)
+    if grid:
+        k_fold_acc = cross_val_score(analyser, X_train, y_train, cv=5)
+        k_fold_mean = k_fold_acc.mean()
+        print('\n', 'k_fold_acc:', k_fold_acc)
+        print('k_fold_mean:', k_fold_mean)
+        print("Best Parameters:", analyser.best_params_)
+        print("Train Score:", analyser.best_score_)
+        print("Test Score:", analyser.score(X_test, y_test))
 
     if plot:
         probs = analyser.predict_proba(X_test)
@@ -74,7 +76,7 @@ def print_shapes(k, X_train, X_test, y_train, y_test):
 
 ##########
 def quadratic_discriminant_analyser(X_train, y_train):
-    qda = QDA()
+    qda = QuadraticDiscriminantAnalysis()
     qda.fit(X_train, y_train)
     return qda
 
@@ -84,7 +86,7 @@ def forest_classifier(X_train, y_train):
     return rf
 
 def linear_discriminant_analyser(X_train, y_train):
-    lda = LDA(n_components=None, store_covariance=True)
+    lda = LinearDiscriminantAnalysis(n_components=None, store_covariance=True)
     lda.fit(X_train, y_train)
     return lda
 
@@ -92,6 +94,21 @@ def logistic_regression_analyser(X_train, y_train):
     lr = LogisticRegression()
     lr.fit(X_train, y_train)
     return lr
+
+def gradient_boosting_classifier(X_train, y_train, X_test, y_test):
+    grid = {
+    'learning_rate':[0.01,0.05,0.1],
+    'n_estimators':np.arange(100,500,100),
+    # 'max_depth':[2,3,4,5,6,7]
+    }
+    gb = GradientBoostingClassifier(learning_rate=0.1, n_estimators=200)
+    gb.fit(X_train, y_train)
+    # gb_cv = GridSearchCV(gb, grid, cv=5)
+    # gb_cv.fit(X_train, y_train)
+    # print("Best Parameters:", gb_cv.best_params_)
+    # print("Train Score:", gb_cv.best_score_)
+    # print("Test Score:", gb_cv.score(X_test, y_test))
+    return gb
 
 ###
 def plot_probs(y_test, probs, xcoords):
@@ -158,7 +175,7 @@ def eval_mean_n(N):
     print('\n', "mean: ", eval_mean)
     return eval_mean
 
-def coef_to_excel(tab):
+def coefs_to_excel(tab):
     from separate_data import get_col_names
     # workbook = xlsxw.Workbook('coefs.xlsx') 
     # worksheet = workbook.add_worksheet("My sheet") 
@@ -172,8 +189,7 @@ def coef_to_excel(tab):
     print('\n', tab)
     print(col_names)
     df = pd.DataFrame(tab, columns = col_names)
-    df.style.background_gradient(cmap='coolwarm').set_precision(2)
-    df.to_excel(r'D:\-CHARLES-\VSCodeProjects\SleeveProject\data\coefs.xlsx', index = False, header=True)
+    df.style.background_gradient(cmap='coolwarm').set_precision(2).to_excel(r'D:\-CHARLES-\VSCodeProjects\SleeveProject\data\coefs.xlsx', index = False, header=True)
     return
 
 
@@ -181,4 +197,4 @@ def coef_to_excel(tab):
 if __name__ == "__main__":
     from separate_data import load_data, get_col_names
     new_data = load_data()
-    eval = process_analysis(new_data, method='lr', plot=True)
+    eval = process_analysis(new_data, method='gb', plot=True, grid=False)
