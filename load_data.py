@@ -17,6 +17,7 @@ def database_preop(db:pd.DataFrame=load_data_from_excel()):
         columns = [
             'Date naissance',
             'Date inclusion',
+            'Metavir',
             'Biopsie hépatique',
             'Degré stéatose',
             'Pourcentage stéatose',
@@ -26,41 +27,48 @@ def database_preop(db:pd.DataFrame=load_data_from_excel()):
             'Fibrose Kleiner'
             ],
             inplace = True)
+    # dbPreop = dbPreop[[
+    #     'Globules rouges',
+    #     'Hémoglobine',
+    #     'Albumine',
+    #     'G-globulines',
+    #     'FIBROMETA',
+    #     'Index Triglycérides-glucose',
+    #     'HOMA-IR',
+    #     'QUICKI',
+    #     'Index peptide C',
+    #     'Elastométrie',
+    #     'Acide urique',
+    #     'Glycémie',
+    #     'HbA1c',
+    #     'Triglycérides',
+    #     'ASAT',
+    #     'ALAT',
+    #     'GGT',
+    #     'Ferritine',
+    #     'Actitest',
+    #     'Fibrotest',
+    #     'Insuline',
+    #     'Peptide C',
+    #     'Dépense énergétique de repos',
+    #     'Présence NASH'
+    # ]]
     dbPreop = dbPreop[[
-        'Globules rouges',
-        'Hémoglobine',
-        'Albumine',
-        'G-globulines',
-        'Metavir',
-        'FIBROMETA',
-        'Index Triglycérides-glucose',
-        'HOMA-IR',
-        'QUICKI',
-        'Index peptide C',
+        'Age',
+        'Sexe',
+        'BilirubineT',
         'Elastométrie',
+        'CAP',
         'Acide urique',
-        'Glycémie',
-        'HbA1c',
         'Triglycérides',
         'ASAT',
         'ALAT',
         'GGT',
         'Ferritine',
-        'Actitest',
-        'Fibrotest',
-        'Insuline',
-        'Peptide C',
         'Dépense énergétique de repos',
+        'HOMA-IR',
         'Présence NASH'
     ]]
-    # dbPreop = dbPreop[[
-    #     'Metavir',
-    #     'Triglycérides',
-    #     'ASAT',
-    #     'ALAT',
-    #     'Actitest',
-    #     'Présence NASH'
-    # ]]
     dbPreop['Présence NASH'] = dbPreop.pop('Présence NASH')
     return fill_nan(dbPreop)
 

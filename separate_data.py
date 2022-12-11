@@ -21,7 +21,7 @@ def separate_discriminant(data):
     return(X, y)
 
 def separate_train_test(X, y, shuff):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=shuff)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, shuffle=shuff)
     return(X_train, X_test, y_train, y_test)
 
 def standard_scaling(X_train, X_test):

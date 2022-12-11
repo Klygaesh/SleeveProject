@@ -36,8 +36,8 @@ def process_analysis(new_data, method:str='lda', plot:bool=False, grid:bool=Fals
         k_fold_mean = k_fold_acc.mean()
         print('\n', 'k_fold_acc:', k_fold_acc)
         print('k_fold_mean:', k_fold_mean)
-        print("Best Parameters:", analyser.best_params_)
-        print("Train Score:", analyser.best_score_)
+        # print("Best Parameters:", analyser.best_params_)
+        # print("Train Score:", analyser.best_score_)
         print("Test Score:", analyser.score(X_test, y_test))
 
     if plot:
@@ -101,7 +101,7 @@ def gradient_boosting_classifier(X_train, y_train, X_test, y_test):
     'n_estimators':np.arange(100,500,100),
     # 'max_depth':[2,3,4,5,6,7]
     }
-    gb = GradientBoostingClassifier(learning_rate=0.1, n_estimators=200)
+    gb = GradientBoostingClassifier(learning_rate=0.01, n_estimators=200)
     gb.fit(X_train, y_train)
     # gb_cv = GridSearchCV(gb, grid, cv=5)
     # gb_cv.fit(X_train, y_train)
@@ -197,4 +197,4 @@ def coefs_to_excel(tab):
 if __name__ == "__main__":
     from separate_data import load_data, get_col_names
     new_data = load_data()
-    eval = process_analysis(new_data, method='gb', plot=True, grid=False)
+    eval = process_analysis(new_data, method='gb', plot=True, grid=True)
